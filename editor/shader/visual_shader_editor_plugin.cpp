@@ -6395,10 +6395,11 @@ void VisualShaderEditor::_update_preview() {
 	String preprocessed_code;
 	{
 		String path = visual_shader->get_path();
+		String pass_pp;
 		String error_pp;
 		List<ShaderPreprocessor::FilePosition> err_positions;
 		ShaderPreprocessor preprocessor;
-		Error err = preprocessor.preprocess(code, path, preprocessed_code, nullptr, &error_pp, &err_positions);
+		Error err = preprocessor.preprocess(code, path, preprocessed_code, &pass_pp, &error_pp, &err_positions);
 		if (err != OK) {
 			ERR_FAIL_COND(err_positions.is_empty());
 
