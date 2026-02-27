@@ -403,6 +403,8 @@ void ShaderPreprocessor::process_directive(Tokenizer *p_tokenizer) {
 		process_include(p_tokenizer);
 	} else if (directive == "pragma") {
 		process_pragma(p_tokenizer);
+	} else if (directive == "pass") {
+		process_pass(p_tokenizer);
 	} else {
 		set_error(RTR("Unknown directive."), p_tokenizer->get_line());
 	}
@@ -829,6 +831,8 @@ void ShaderPreprocessor::process_undef(Tokenizer *p_tokenizer) {
 
 void ShaderPreprocessor::process_pass(Tokenizer* p_tokenizer) {
 	const int line = p_tokenizer->get_line();
+
+	// get the name of the pass
 	const String label = p_tokenizer->get_identifier();
 	// error for wrong pass
 	if (label.is_empty() || !p_tokenizer->consume_empty_line()) {
@@ -841,6 +845,10 @@ void ShaderPreprocessor::process_pass(Tokenizer* p_tokenizer) {
 		set_error(vformat(RTR("Cannot use pass directive '%s' if it's been already defined previously."), label), line);
 		return;
 	}
+
+	// save the region in the state->pass_regions and state->passes
+	// TODO: is it necessary to save it in both?
+	add_pass(line + 1, state->previous_region, 0);	// TODO: ensure the priority is correct from the order of passes
 }
 
 void ShaderPreprocessor::add_region(int p_line, bool p_enabled, Region *p_parent_region) {
@@ -850,6 +858,19 @@ void ShaderPreprocessor::add_region(int p_line, bool p_enabled, Region *p_parent
 	region.from_line = p_line;
 	region.parent = p_parent_region;
 	state->previous_region = &state->regions[region.file].push_back(region)->get();
+}
+
+void ShaderPreprocessor::add_pass(int p_line, Region *p_parent_region, int priority) {
+	// make the PassRegion
+	PassRegion region;
+	region.file = state->current_filename;
+	region.from_line = p_line;
+	region.parent = p_parent_region;
+	region.priority = state->passes.size();	// TODO: ensure the priority is correct from the order of passes
+
+	// add it to the map and vector in the state
+	state->pass_regions[region.file].push_back(region)->get();
+	state->passes.push_back("");	// TODO: get string of the body of the pass code?
 }
 
 void ShaderPreprocessor::start_branch_condition(Tokenizer *p_tokenizer, bool p_success, bool p_continue) {
@@ -1465,6 +1486,7 @@ void ShaderPreprocessor::get_keyword_list(List<String> *r_keywords, bool p_inclu
 	r_keywords->push_back("include");
 	r_keywords->push_back("pragma");
 	r_keywords->push_back("undef");
+	r_keywords->push_back("pass");
 }
 
 void ShaderPreprocessor::get_pragma_list(List<String> *r_pragmas) {

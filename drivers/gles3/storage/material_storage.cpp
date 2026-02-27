@@ -2237,6 +2237,7 @@ void MaterialStorage::shader_set_code(RID p_shader, const String &p_code) {
 		ERR_PRINT("shader type " + mode_string + " not supported in OpenGL renderer");
 	}
 
+	// if the new shader mode changed from shader's current mode, update it
 	if (new_mode != shader->mode) {
 		if (shader->data) {
 			memdelete(shader->data);
