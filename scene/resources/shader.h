@@ -60,6 +60,7 @@ private:
 	HashSet<Ref<ShaderInclude>> include_dependencies;
 	String code;
 	String include_path;
+	Vector<Ref<Shader>> next_passes;
 
 	HashMap<StringName, HashMap<int, Ref<Texture>>> default_textures;
 
@@ -68,6 +69,7 @@ private:
 	void _recompile();
 	virtual void _update_shader() const; //used for visual shader
 	Array _get_shader_uniform_list(bool p_get_groups = false);
+	Vector<Ref<Shader>> get_next_passes();
 
 protected:
 #ifndef DISABLE_DEPRECATED

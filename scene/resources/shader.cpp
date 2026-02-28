@@ -82,6 +82,7 @@ void Shader::set_include_path(const String &p_path) {
 	include_path = p_path;
 }
 
+// this is called when shader is instantiated
 void Shader::set_code(const String &p_code) {
 	for (const Ref<ShaderInclude> &E : include_dependencies) {
 		E->disconnect_changed(callable_mp(this, &Shader::_dependency_changed));
@@ -99,8 +100,13 @@ void Shader::set_code(const String &p_code) {
 		// 1) Need to keep track of include dependencies at resource level
 		// 2) Server does not do interaction with Resource filetypes, this is a scene level feature.
 		HashSet<Ref<ShaderInclude>> new_include_dependencies;
+		Vector<String> shader_passes;
+
+		// string of a? pass?
+		String passes = "";
+
 		ShaderPreprocessor preprocessor;
-		Error result = preprocessor.preprocess(p_code, path, preprocessed_code, nullptr, nullptr, nullptr, nullptr, &new_include_dependencies);
+		Error result = preprocessor.preprocess(p_code, path, preprocessed_code, &passes, nullptr, nullptr, nullptr, &new_include_dependencies, nullptr, nullptr, nullptr, &shader_passes);
 		if (result == OK) {
 			// This ensures previous include resources are not freed and then re-loaded during parse (which would make compiling slower)
 			include_dependencies = new_include_dependencies;
@@ -267,6 +273,10 @@ Array Shader::_get_shader_uniform_list(bool p_get_groups) {
 		ret.push_back(pi.operator Dictionary());
 	}
 	return ret;
+}
+
+Vector<Ref<Shader>> Shader::get_next_passes() {
+	return next_passes;
 }
 
 void Shader::_bind_methods() {
