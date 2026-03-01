@@ -834,21 +834,20 @@ void ShaderPreprocessor::process_pass(Tokenizer* p_tokenizer) {
 
 	// get the name of the pass
 	const String label = p_tokenizer->get_identifier();
-	// error for wrong pass
+
+	// error if the pass doesn't have a name
 	if (label.is_empty() || !p_tokenizer->consume_empty_line()) {
-		set_error(vformat(RTR("Invalid '%s' direction."), "pass"), line);
+		set_error(vformat(RTR("Invalid '%s' directive, needs a name."), "pass"), line);
 		return;
 	}
 
 	// error for double defines
-	if (state->defines.has(label)) {
+	if (state->passes.has(label)) {
 		set_error(vformat(RTR("Cannot use pass directive '%s' if it's been already defined previously."), label), line);
 		return;
 	}
 
-	// save the region in the state->pass_regions and state->passes
-	// TODO: is it necessary to save it in both?
-	add_pass(line + 1, state->previous_region, 0);	// TODO: ensure the priority is correct from the order of passes
+	add_pass(label, line + 1, 0);	// TODO: ensure the priority is correct from the order of passes
 }
 
 void ShaderPreprocessor::add_region(int p_line, bool p_enabled, Region *p_parent_region) {
@@ -860,17 +859,34 @@ void ShaderPreprocessor::add_region(int p_line, bool p_enabled, Region *p_parent
 	state->previous_region = &state->regions[region.file].push_back(region)->get();
 }
 
-void ShaderPreprocessor::add_pass(int p_line, Region *p_parent_region, int priority) {
+void ShaderPreprocessor::add_pass(const String &name, int p_line, int priority) {
 	// make the PassRegion
 	PassRegion region;
 	region.file = state->current_filename;
+	region.name = name;
 	region.from_line = p_line;
-	region.parent = p_parent_region;
 	region.priority = state->passes.size();	// TODO: ensure the priority is correct from the order of passes
 
-	// add it to the map and vector in the state
-	state->pass_regions[region.file].push_back(region)->get();
-	state->passes.push_back("");	// TODO: get string of the body of the pass code?
+	// set the previous pass' next ptr to this
+	if (state->previous_pass_region) {
+		state->previous_pass_region->next = &region;
+	}
+
+	// save the pass region in state->pass_regions, key is the file name
+	// then set the previous_pass_region ptr to this
+	state->previous_pass_region = &state->pass_regions[region.file].push_back(region)->get();
+
+	// add the pass' name to state->passes
+	state->passes.push_back(name);
+
+
+#ifdef DEBUG_ENABLED
+	// log to output
+	print_line(vformat(
+		"PASS ADDED\nname: %s\nfile: %s\nline: %d\npriority: %d\nnumRegions: %d\n",
+		name, region.file, region.from_line, region.priority, state->passes.size()
+	));
+#endif
 }
 
 void ShaderPreprocessor::start_branch_condition(Tokenizer *p_tokenizer, bool p_success, bool p_continue) {

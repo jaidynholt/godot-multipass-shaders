@@ -65,10 +65,11 @@ public:
 
 	struct PassRegion {
 		String file;
+		String name;
 		int from_line = -1;
 		int to_line = -1;
 		int priority = 0;
-		Region *parent = nullptr;
+		PassRegion *next = nullptr;
 	};
 
 private:
@@ -167,11 +168,12 @@ private:
 		bool save_regions = false;
 		RBMap<String, List<Region>> regions;
 		Region *previous_region = nullptr;
+		PassRegion *previous_pass_region = nullptr;
 		bool disabled = false;
 		CompletionType completion_type = COMPLETION_TYPE_NONE;
 		HashSet<Ref<ShaderInclude>> shader_includes;
-		RBMap<String, List<PassRegion>> pass_regions;
-		Vector<String> passes;
+		RBMap<String, List<PassRegion>> pass_regions;	// dict indexed on file names of all pass regions per file
+		Vector<String> passes;	// names of the passes
 	};
 
 private:
@@ -209,7 +211,7 @@ private:
 	void process_pass(Tokenizer *p_tokenizer);
 
 	void add_region(int p_line, bool p_enabled, Region *p_parent_region);
-	void add_pass(int p_line, Region *p_parent_region, int priority = 0);
+	void add_pass(const String &name, int p_line, int priority = 0);
 	void start_branch_condition(Tokenizer *p_tokenizer, bool p_success, bool p_continue = false);
 
 	Error expand_condition(const String &p_string, int p_line, String &r_result);
