@@ -847,7 +847,7 @@ void ShaderPreprocessor::process_pass(Tokenizer* p_tokenizer) {
 		return;
 	}
 
-	add_pass(label, line + 1, 0);	// TODO: ensure the priority is correct from the order of passes
+	add_pass(label, line, 0);	// TODO: ensure the priority is correct from the order of passes
 }
 
 void ShaderPreprocessor::add_region(int p_line, bool p_enabled, Region *p_parent_region) {
@@ -864,12 +864,16 @@ void ShaderPreprocessor::add_pass(const String &name, int p_line, int priority) 
 	PassRegion region;
 	region.file = state->current_filename;
 	region.name = name;
-	region.from_line = p_line;
+	region.from_line = p_line + 1;
 	region.priority = state->passes.size();	// TODO: ensure the priority is correct from the order of passes
 
-	// set the previous pass' next ptr to this
+	// set the previous pass' to_line and next ptr to this
 	if (state->previous_pass_region) {
+		state->previous_pass_region->to_line = p_line;
 		state->previous_pass_region->next = &region;
+		print_line(vformat(
+				"PREVIOUS PASS UPDATED\nname: %s\nnext: %s\nline: %d - %d\n",
+				state->previous_pass_region->name, state->previous_pass_region->next->name, state->previous_pass_region->from_line, state->previous_pass_region->to_line));
 	}
 
 	// save the pass region in state->pass_regions, key is the file name
