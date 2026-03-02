@@ -847,7 +847,7 @@ void ShaderPreprocessor::process_pass(Tokenizer* p_tokenizer) {
 		return;
 	}
 
-	add_pass(label, line, 0);	// TODO: ensure the priority is correct from the order of passes
+	add_pass(label, 0);	// TODO: ensure the priority is correct from the order of passes
 }
 
 void ShaderPreprocessor::add_region(int p_line, bool p_enabled, Region *p_parent_region) {
@@ -859,38 +859,29 @@ void ShaderPreprocessor::add_region(int p_line, bool p_enabled, Region *p_parent
 	state->previous_region = &state->regions[region.file].push_back(region)->get();
 }
 
-void ShaderPreprocessor::add_pass(const String &name, int p_line, int priority) {
+void ShaderPreprocessor::add_pass(const String &name, int priority) {
 	// make the PassRegion
 	PassRegion region;
 	region.file = state->current_filename;
 	region.name = name;
-	region.from_line = p_line + 1;
 	region.priority = state->passes.size();	// TODO: ensure the priority is correct from the order of passes
-
-	// set the previous pass' to_line and next ptr to this
-	if (state->previous_pass_region) {
-		state->previous_pass_region->to_line = p_line;
-		state->previous_pass_region->next = &region;
-		print_line(vformat(
-				"PREVIOUS PASS UPDATED\nname: %s\nnext: %s\nline: %d - %d\n",
-				state->previous_pass_region->name, state->previous_pass_region->next->name, state->previous_pass_region->from_line, state->previous_pass_region->to_line));
-	}
 
 	// save the pass region in state->pass_regions, key is the file name
 	// then set the previous_pass_region ptr to this
-	state->previous_pass_region = &state->pass_regions[region.file].push_back(region)->get();
+	PassRegion* thisPass = &state->pass_regions[region.file].push_back(region)->get();
+
+	// set the previous pass' to_line and next ptr to this and set the actual code
+	if (state->previous_pass_region) {
+		state->previous_pass_region->next = thisPass;
+		state->previous_pass_region->code = vector_to_string(pass_output);
+		pass_output.clear();
+	}
+
+	// set the previous region to be this region now
+	state->previous_pass_region = thisPass;
 
 	// add the pass' name to state->passes
 	state->passes.push_back(name);
-
-
-#ifdef DEBUG_ENABLED
-	// log to output
-	print_line(vformat(
-		"PASS ADDED\nname: %s\nfile: %s\nline: %d\npriority: %d\nnumRegions: %d\n",
-		name, region.file, region.from_line, region.priority, state->passes.size()
-	));
-#endif
 }
 
 void ShaderPreprocessor::start_branch_condition(Tokenizer *p_tokenizer, bool p_success, bool p_continue) {
@@ -1314,6 +1305,7 @@ void ShaderPreprocessor::clear_state() {
 
 Error ShaderPreprocessor::preprocess(State *p_state, const String &p_code, String &r_result) {
 	output.clear();
+	pass_output.clear();
 
 	state = p_state;
 
@@ -1337,6 +1329,11 @@ Error ShaderPreprocessor::preprocess(State *p_state, const String &p_code, Strin
 		const Token &t = p_tokenizer.get_token();
 
 		if (t.text == 0) {
+			// if there is leftover code output for passes, add it to the last pass
+			if (state->previous_pass_region && !pass_output.is_empty()) {
+				state->previous_pass_region->code = vector_to_string(pass_output);
+				pass_output.clear();
+			}
 			break;
 		}
 
@@ -1365,7 +1362,13 @@ Error ShaderPreprocessor::preprocess(State *p_state, const String &p_code, Strin
 			} else if (!is_char_space(t.text)) {
 				has_symbols_before_directive = true;
 			}
+
 			output.push_back(t.text);
+
+			// if there is a currently tracked pass region, then add the code to it too
+			if (state->previous_pass_region) {
+				pass_output.push_back(t.text);
+			}
 		}
 
 		if (!state->error.is_empty()) {
@@ -1389,7 +1392,7 @@ Error ShaderPreprocessor::preprocess(State *p_state, const String &p_code, Strin
 	return OK;
 }
 
-Error ShaderPreprocessor::preprocess(const String &p_code, const String &p_filename, String &r_result, String *p_pass, String *r_error_text, List<FilePosition> *r_error_position, List<Region> *r_regions, HashSet<Ref<ShaderInclude>> *r_includes, List<ScriptLanguage::CodeCompletionOption> *r_completion_options, List<ScriptLanguage::CodeCompletionOption> *r_completion_defines, IncludeCompletionFunction p_include_completion_func, Vector<String> *r_passes) {
+Error ShaderPreprocessor::preprocess(const String &p_code, const String &p_filename, String &r_result, String *r_error_text, List<FilePosition> *r_error_position, List<Region> *r_regions, List<PassRegion> *r_passes, HashSet<Ref<ShaderInclude>> *r_includes, List<ScriptLanguage::CodeCompletionOption> *r_completion_options, List<ScriptLanguage::CodeCompletionOption> *r_completion_defines, IncludeCompletionFunction p_include_completion_func) {
 	State pp_state;
 	if (!p_filename.is_empty()) {
 		pp_state.current_filename = p_filename;
@@ -1413,9 +1416,9 @@ Error ShaderPreprocessor::preprocess(const String &p_code, const String &p_filen
 		insert_builtin_define("RENDERER_FORWARD_PLUS", _MKSTR(2), pp_state);
 
 		// initialize pass with an empty body
-		if (p_pass) {
+		/*if (p_pass) {
 			insert_builtin_define(*p_pass, "", pp_state);
-		}
+		}*/
 	}
 
 	Error err = preprocess(&pp_state, p_code, r_result);
@@ -1427,8 +1430,19 @@ Error ShaderPreprocessor::preprocess(const String &p_code, const String &p_filen
 			*r_error_position = pp_state.include_positions;
 		}
 	}
+
+#ifdef DEBUG_ENABLED
+	// print to output: check if the passes were added correctly
+	for (PassRegion pass : pp_state.pass_regions[p_filename]) {
+		print_line(vformat(
+				"PASS\nname: %s\nfile: %s\npriority: %d\nnext: %s\ncode: %s\n",
+				pass.name, pass.file, pass.priority, pass.next ? pass.next->name : "null", pass.code));
+	}
+#endif
+
+
 	if (r_passes) {
-		*r_passes = pp_state.passes;
+		*r_passes = pp_state.pass_regions[p_filename];
 	}
 	if (r_regions) {
 		*r_regions = pp_state.regions[p_filename];

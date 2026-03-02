@@ -488,7 +488,7 @@ void ShaderTextEditor::_validate_script() {
 	} else if (shader_inc.is_valid()) {
 		filename = shader_inc->get_path();
 	}
-	last_compile_result = preprocessor.preprocess(code, filename, code_pp, &pass_pp, &error_pp, &err_positions, &regions);
+	last_compile_result = preprocessor.preprocess(code, filename, code_pp, &error_pp, &err_positions, &regions);
 
 	for (int i = 0; i < get_text_editor()->get_line_count(); i++) {
 		get_text_editor()->set_line_background_color(i, Color(0, 0, 0, 0));

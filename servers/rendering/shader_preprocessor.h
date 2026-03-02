@@ -66,9 +66,8 @@ public:
 	struct PassRegion {
 		String file;
 		String name;
-		int from_line = -1;
-		int to_line = -1;
 		int priority = 0;
+		String code;
 		PassRegion *next = nullptr;
 	};
 
@@ -178,6 +177,7 @@ private:
 
 private:
 	LocalVector<char32_t> output;
+	LocalVector<char32_t> pass_output;
 	State *state = nullptr;
 
 private:
@@ -211,7 +211,7 @@ private:
 	void process_pass(Tokenizer *p_tokenizer);
 
 	void add_region(int p_line, bool p_enabled, Region *p_parent_region);
-	void add_pass(const String &name, int p_line, int priority = 0);
+	void add_pass(const String &name, int priority = 0);
 	void start_branch_condition(Tokenizer *p_tokenizer, bool p_success, bool p_continue = false);
 
 	Error expand_condition(const String &p_string, int p_line, String &r_result);
@@ -237,10 +237,10 @@ public:
 
 
 	// add passes to this function (rewrite comment to be more descriptive)
-	Error preprocess(const String &p_code, const String &p_filename, String &r_result, String *p_pass = nullptr,
-		String *r_error_text = nullptr, List<FilePosition> *r_error_position = nullptr, List<Region> *r_regions = nullptr,
+	Error preprocess(const String &p_code, const String &p_filename, String &r_result,
+			String *r_error_text = nullptr, List<FilePosition> *r_error_position = nullptr, List<Region> *r_regions = nullptr, List<PassRegion> *r_passes = nullptr,
 		HashSet<Ref<ShaderInclude>> *r_includes = nullptr, List<ScriptLanguage::CodeCompletionOption> *r_completion_options = nullptr,
-		List<ScriptLanguage::CodeCompletionOption> *r_completion_defines = nullptr, IncludeCompletionFunction p_include_completion_func = nullptr, Vector<String> *r_passes = nullptr);
+		List<ScriptLanguage::CodeCompletionOption> *r_completion_defines = nullptr, IncludeCompletionFunction p_include_completion_func = nullptr);
 
 	static void get_keyword_list(List<String> *r_keywords, bool p_include_shader_keywords, bool p_ignore_context_keywords = false);
 	static void get_pragma_list(List<String> *r_pragmas);
