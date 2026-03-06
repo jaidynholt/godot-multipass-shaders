@@ -76,9 +76,9 @@ void Shader::set_path(const String &p_path, bool p_take_over) {
 	}
 }
 
-//void Shader::set_include_path_dependencies(HashSet<Ref<ShaderInclude>> new_include_dependencies) {
-//	include_dependencies = new_include_dependencies;
-//}
+void Shader::set_include_path_dependencies(HashSet<Ref<ShaderInclude>> new_include_dependencies) {
+	include_dependencies = new_include_dependencies;
+}
 
 void Shader::set_include_path(const String &p_path) {
 	// Used only if the shader does not have a resource path set,
@@ -118,20 +118,20 @@ void Shader::set_code(const String &p_code) {
 
 				shader->set_include_path(include_path);
 				shader->set_code(pr.code);
-				//shader->set_include_path_dependencies(include_dependencies);
+				shader->set_include_path_dependencies(include_dependencies);
 
 				next_passes.push_back(shader);
 
 			}
 
-//#ifdef DEBUG_ENABLED
-//			for (Ref<Shader> shader : next_passes) {
-//				print_line(vformat(
-//					"SHADER\code: %s\n",
-//						shader->get_code()));
-//			}
-//			
-//#endif
+#ifdef DEBUG_ENABLED
+			for (Ref<Shader> shader : next_passes) {
+				print_line(vformat(
+					"SHADER\code: %s\n",
+						shader->get_code()));
+			}
+			
+#endif
 		}
 	}
 

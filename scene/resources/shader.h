@@ -87,7 +87,7 @@ public:
 
 	virtual void set_path(const String &p_path, bool p_take_over = false) override;
 	void set_include_path(const String &p_path);
-	//void set_include_path_dependencies(HashSet<Ref<ShaderInclude>> new_include_dependencies);
+	void set_include_path_dependencies(HashSet<Ref<ShaderInclude>> new_include_dependencies);
 
 	void set_code(const String &p_code);
 	String get_code() const;
