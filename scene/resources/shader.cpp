@@ -76,6 +76,10 @@ void Shader::set_path(const String &p_path, bool p_take_over) {
 	}
 }
 
+//void Shader::set_include_path_dependencies(HashSet<Ref<ShaderInclude>> new_include_dependencies) {
+//	include_dependencies = new_include_dependencies;
+//}
+
 void Shader::set_include_path(const String &p_path) {
 	// Used only if the shader does not have a resource path set,
 	// for example during loading stage or when created by code.
@@ -100,13 +104,34 @@ void Shader::set_code(const String &p_code) {
 		// 1) Need to keep track of include dependencies at resource level
 		// 2) Server does not do interaction with Resource filetypes, this is a scene level feature.
 		HashSet<Ref<ShaderInclude>> new_include_dependencies;
-		List<ShaderPreprocessor::PassRegion> passes;
-
 		ShaderPreprocessor preprocessor;
-		Error result = preprocessor.preprocess(p_code, path, preprocessed_code, nullptr, nullptr, nullptr, &passes, &new_include_dependencies);
+		List<ShaderPreprocessor::PassRegion> pass_regions;
+
+		Error result = preprocessor.preprocess(p_code, path, preprocessed_code, nullptr, nullptr, nullptr, &pass_regions, &new_include_dependencies);
 		if (result == OK) {
 			// This ensures previous include resources are not freed and then re-loaded during parse (which would make compiling slower)
 			include_dependencies = new_include_dependencies;
+
+			for (ShaderPreprocessor::PassRegion pr : pass_regions) {
+				Ref<Shader> shader;
+				shader.instantiate();
+
+				shader->set_include_path(include_path);
+				shader->set_code(pr.code);
+				//shader->set_include_path_dependencies(include_dependencies);
+
+				next_passes.push_back(shader);
+
+			}
+
+//#ifdef DEBUG_ENABLED
+//			for (Ref<Shader> shader : next_passes) {
+//				print_line(vformat(
+//					"SHADER\code: %s\n",
+//						shader->get_code()));
+//			}
+//			
+//#endif
 		}
 	}
 
@@ -327,11 +352,14 @@ Ref<Resource> ResourceFormatLoaderShader::load(const String &p_path, const Strin
 		ERR_FAIL_COND_V_MSG(error, nullptr, "Cannot parse shader: " + p_path);
 	}
 
+	// HERE
 	Ref<Shader> shader;
 	shader.instantiate();
 
 	shader->set_include_path(p_path);
 	shader->set_code(str);
+
+
 
 	if (r_error) {
 		*r_error = OK;
