@@ -873,7 +873,7 @@ void ShaderPreprocessor::add_pass(const String &name, int priority) {
 	// set the previous pass' to_line and next ptr to this and set the actual code
 	if (state->previous_pass_region) {
 		state->previous_pass_region->next = thisPass;
-		state->previous_pass_region->code = vector_to_string(pass_output);
+		state->previous_pass_region->code = vector_to_string(common_pass_output) + vector_to_string(pass_output);
 		pass_output.clear();
 	}
 
@@ -1363,11 +1363,16 @@ Error ShaderPreprocessor::preprocess(State *p_state, const String &p_code, Strin
 				has_symbols_before_directive = true;
 			}
 
+			// update the main code section
 			output.push_back(t.text);
 
 			// if there is a currently tracked pass region, then add the code to it too
 			if (state->previous_pass_region) {
 				pass_output.push_back(t.text);
+			}
+			// if there is not a tracked pass region, it's the common code
+			else {
+				common_pass_output.push_back(t.text);
 			}
 		}
 
