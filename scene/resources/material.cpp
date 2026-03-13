@@ -214,6 +214,7 @@ bool ShaderMaterial::_set(const StringName &p_name, const Variant &p_value) {
 					currPass->set_shader(pass);
 					currPass->set_render_priority(0);
 					current->set_next_pass(currPass);
+					current = currPass;
 				}
 			}
 		}
