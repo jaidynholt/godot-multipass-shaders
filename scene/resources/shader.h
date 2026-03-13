@@ -61,6 +61,8 @@ private:
 	String code;
 	String include_path;
 	Vector<Ref<Shader>> next_passes;
+	int pass_index = 0;
+	int priority = 0;
 
 
 	HashMap<StringName, HashMap<int, Ref<Texture>>> default_textures;
@@ -70,7 +72,6 @@ private:
 	void _recompile();
 	virtual void _update_shader() const; //used for visual shader
 	Array _get_shader_uniform_list(bool p_get_groups = false);
-	Vector<Ref<Shader>> get_next_passes();
 
 protected:
 #ifndef DISABLE_DEPRECATED
@@ -95,10 +96,13 @@ public:
 	void inspect_native_shader_code();
 
 	void get_shader_uniform_list(List<PropertyInfo> *p_params, bool p_get_groups = false) const;
+	Vector<Ref<Shader>> get_next_passes();
 
 	void set_default_texture_parameter(const StringName &p_name, const Ref<Texture> &p_texture, int p_index = 0);
 	Ref<Texture> get_default_texture_parameter(const StringName &p_name, int p_index = 0) const;
 	void get_default_texture_parameter_list(List<StringName> *r_textures) const;
+
+	void set_next_passes(Vector<Ref<Shader>> *r_next_passes, int next_pass_index, int next_pass_priority);
 
 	virtual bool is_text_shader() const;
 

@@ -86,6 +86,12 @@ void Shader::set_include_path(const String &p_path) {
 	include_path = p_path;
 }
 
+void Shader::set_next_passes(Vector<Ref<Shader>>* r_next_passes, int next_pass_index, int next_pass_priority) {
+	next_passes = *r_next_passes;
+	pass_index = next_pass_index;
+	priority = next_pass_priority;
+}
+
 // this is called when shader is instantiated
 void Shader::set_code(const String &p_code) {
 	for (const Ref<ShaderInclude> &E : include_dependencies) {
@@ -111,7 +117,7 @@ void Shader::set_code(const String &p_code) {
 		if (result == OK) {
 			// This ensures previous include resources are not freed and then re-loaded during parse (which would make compiling slower)
 			include_dependencies = new_include_dependencies;
-
+			int curr_index = 0;
 			for (ShaderPreprocessor::PassRegion pr : pass_regions) {
 				Ref<Shader> shader;
 				shader.instantiate();
@@ -119,10 +125,13 @@ void Shader::set_code(const String &p_code) {
 				shader->set_include_path(include_path);
 				shader->set_code(pr.code);
 				shader->set_include_path_dependencies(include_dependencies);
+				shader->set_next_passes(&next_passes, curr_index + 1, pr.priority);
 
 				next_passes.push_back(shader);
 
 			}
+
+
 
 #ifdef DEBUG_ENABLED
 			for (Ref<Shader> shader : next_passes) {

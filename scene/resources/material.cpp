@@ -203,6 +203,13 @@ bool ShaderMaterial::_set(const StringName &p_name, const Variant &p_value) {
 			set_shader_parameter(param, p_value);
 			return true;
 		}
+
+		// if there are nextpasses
+
+		if (!shader->get_next_passes().is_empty()) {
+
+		}
+
 #ifndef DISABLE_DEPRECATED
 		// Compatibility remaps are only needed here.
 		if (s.begins_with("param/")) {
