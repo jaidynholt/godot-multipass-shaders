@@ -204,10 +204,18 @@ bool ShaderMaterial::_set(const StringName &p_name, const Variant &p_value) {
 			return true;
 		}
 
-		// if there are nextpasses
+		// if there are next passes
 
+		ShaderMaterial *current = this;
 		if (!shader->get_next_passes().is_empty()) {
-
+			for (Ref<Shader> pass : shader->get_next_passes()) {
+				if (pass.is_valid()) {
+					ShaderMaterial* currPass = new ShaderMaterial();
+					currPass->set_shader(pass);
+					currPass->set_render_priority(0);
+					current->set_next_pass(currPass);
+				}
+			}
 		}
 
 #ifndef DISABLE_DEPRECATED
