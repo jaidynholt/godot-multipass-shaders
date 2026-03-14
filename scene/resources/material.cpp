@@ -214,9 +214,19 @@ bool ShaderMaterial::_set(const StringName &p_name, const Variant &p_value) {
 					currPass->set_shader(pass);
 					currPass->set_render_priority(0);
 					current->set_next_pass(currPass);
+					next_passes.push_back(currPass);
 					current = currPass;
 				}
 			}
+
+#ifdef DEBUG_ENABLED
+			for (Ref<ShaderMaterial> material : next_passes) {
+				print_line(vformat(
+						"SHADERMATERIAL\ncode: %s\n",
+						material->get_shader()));
+			}
+
+#endif
 		}
 
 #ifndef DISABLE_DEPRECATED

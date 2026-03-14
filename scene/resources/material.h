@@ -96,7 +96,7 @@ public:
 class ShaderMaterial : public Material {
 	GDCLASS(ShaderMaterial, Material);
 	Ref<Shader> shader;
-	Ref<ShaderMaterial> next_passes;
+	Vector<Ref<ShaderMaterial>> next_passes;
 
 	mutable HashMap<StringName, StringName> remap_cache;
 	mutable HashMap<StringName, Variant> param_cache;

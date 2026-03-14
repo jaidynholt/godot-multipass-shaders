@@ -136,7 +136,7 @@ void Shader::set_code(const String &p_code) {
 #ifdef DEBUG_ENABLED
 			for (Ref<Shader> shader : next_passes) {
 				print_line(vformat(
-					"SHADER\code: %s\n",
+					"SHADER\ncode: %s\n",
 						shader->get_code()));
 			}
 			
