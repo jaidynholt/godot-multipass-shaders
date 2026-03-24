@@ -873,7 +873,7 @@ void ShaderPreprocessor::add_pass(const String &name, int priority) {
 	// set the previous pass' to_line and next ptr to this and set the actual code
 	if (state->previous_pass_region) {
 		state->previous_pass_region->next = thisPass;
-		state->previous_pass_region->code = vector_to_string(pass_output);
+		state->previous_pass_region->code = vector_to_string(common_pass_output) + vector_to_string(pass_output);
 		pass_output.clear();
 	}
 
@@ -1306,6 +1306,7 @@ void ShaderPreprocessor::clear_state() {
 Error ShaderPreprocessor::preprocess(State *p_state, const String &p_code, String &r_result) {
 	output.clear();
 	pass_output.clear();
+	common_pass_output.clear();
 
 	state = p_state;
 
@@ -1331,7 +1332,7 @@ Error ShaderPreprocessor::preprocess(State *p_state, const String &p_code, Strin
 		if (t.text == 0) {
 			// if there is leftover code output for passes, add it to the last pass
 			if (state->previous_pass_region && !pass_output.is_empty()) {
-				state->previous_pass_region->code = vector_to_string(pass_output);
+				state->previous_pass_region->code = vector_to_string(common_pass_output) + vector_to_string(pass_output);
 				pass_output.clear();
 			}
 			break;
@@ -1363,11 +1364,16 @@ Error ShaderPreprocessor::preprocess(State *p_state, const String &p_code, Strin
 				has_symbols_before_directive = true;
 			}
 
+			// update the main code section
 			output.push_back(t.text);
 
 			// if there is a currently tracked pass region, then add the code to it too
 			if (state->previous_pass_region) {
 				pass_output.push_back(t.text);
+			}
+			// if there is not a tracked pass region, it's the common code
+			else {
+				common_pass_output.push_back(t.text);
 			}
 		}
 
@@ -1439,6 +1445,14 @@ Error ShaderPreprocessor::preprocess(const String &p_code, const String &p_filen
 				pass.name, pass.file, pass.priority, pass.next ? pass.next->name : "null", pass.code));
 	}
 #endif
+
+	// if there exist passes, then replace the code with the code of the first pass
+	// NOTE: this fixes the in-editor preprocessor issue with duplicate vertex() and fragment()
+	// currently working on fixing where the shader_compiler is called so it checks the passes individually
+	// so this hacky fix is not needed
+	/*if (!pp_state.pass_regions[p_filename].is_empty()) {
+		r_result = pp_state.pass_regions[p_filename].front()->get().code;
+	}*/
 
 
 	if (r_passes) {
