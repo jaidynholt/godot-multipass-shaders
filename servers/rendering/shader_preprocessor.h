@@ -177,6 +177,7 @@ private:
 
 private:
 	LocalVector<char32_t> output;
+	LocalVector<char32_t> common_pass_output;
 	LocalVector<char32_t> pass_output;
 	State *state = nullptr;
 
@@ -238,7 +239,7 @@ public:
 
 	// add passes to this function (rewrite comment to be more descriptive)
 	Error preprocess(const String &p_code, const String &p_filename, String &r_result,
-			String *r_error_text = nullptr, List<FilePosition> *r_error_position = nullptr, List<Region> *r_regions = nullptr, List<PassRegion> *r_passes = nullptr,
+		String *r_error_text = nullptr, List<FilePosition> *r_error_position = nullptr, List<Region> *r_regions = nullptr, List<PassRegion> *r_passes = nullptr,
 		HashSet<Ref<ShaderInclude>> *r_includes = nullptr, List<ScriptLanguage::CodeCompletionOption> *r_completion_options = nullptr,
 		List<ScriptLanguage::CodeCompletionOption> *r_completion_defines = nullptr, IncludeCompletionFunction p_include_completion_func = nullptr);
 
