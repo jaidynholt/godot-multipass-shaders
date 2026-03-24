@@ -118,6 +118,7 @@ void Shader::set_code(const String &p_code) {
 			// This ensures previous include resources are not freed and then re-loaded during parse (which would make compiling slower)
 			include_dependencies = new_include_dependencies;
 			int curr_index = 0;
+
 			for (ShaderPreprocessor::PassRegion pr : pass_regions) {
 				Ref<Shader> shader;
 				shader.instantiate();
@@ -126,10 +127,10 @@ void Shader::set_code(const String &p_code) {
 				shader->set_code(pr.code);
 				shader->set_include_path_dependencies(include_dependencies);
 				shader->set_next_passes(&next_passes, curr_index + 1, pr.priority);
-
 				next_passes.push_back(shader);
 
 			}
+
 
 
 

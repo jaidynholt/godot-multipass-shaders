@@ -206,28 +206,28 @@ bool ShaderMaterial::_set(const StringName &p_name, const Variant &p_value) {
 
 		// if there are next passes
 
-		ShaderMaterial *current = this;
-		if (!shader->get_next_passes().is_empty()) {
-			for (Ref<Shader> pass : shader->get_next_passes()) {
-				if (pass.is_valid()) {
-					ShaderMaterial* currPass = new ShaderMaterial();
-					currPass->set_shader(pass);
-					currPass->set_render_priority(0);
-					current->set_next_pass(currPass);
-					next_passes.push_back(currPass);
-					current = currPass;
-				}
-			}
-
-#ifdef DEBUG_ENABLED
-			for (Ref<ShaderMaterial> material : next_passes) {
-				print_line(vformat(
-						"SHADERMATERIAL\ncode: %s\n",
-						material->get_shader()));
-			}
-
-#endif
-		}
+//		ShaderMaterial *current = this;
+//		if (!shader->get_next_passes().is_empty()) {
+//			for (Ref<Shader> pass : shader->get_next_passes()) {
+//				if (pass.is_valid()) {
+//					ShaderMaterial* currPass = new ShaderMaterial();
+//					currPass->set_shader(pass);
+//					currPass->set_render_priority(0);
+//					current->set_next_pass(currPass);
+//					next_passes.push_back(currPass);
+//					current = currPass;
+//				}
+//			}
+//
+//#ifdef DEBUG_ENABLED
+//			for (Ref<ShaderMaterial> material : next_passes) {
+//				print_line(vformat(
+//						"SHADERMATERIAL\ncode: %s\n",
+//						material->get_shader()));
+//			}
+//
+//#endif
+		//}
 
 #ifndef DISABLE_DEPRECATED
 		// Compatibility remaps are only needed here.
@@ -455,6 +455,32 @@ void ShaderMaterial::set_shader(const Ref<Shader> &p_shader) {
 
 		if (Engine::get_singleton()->is_editor_hint()) {
 			shader->connect_changed(callable_mp(this, &ShaderMaterial::_shader_changed));
+		}
+
+		// if there are next passes
+
+		ShaderMaterial *current = this;
+		if (!shader->get_next_passes().is_empty()) {
+			for (Ref<Shader> pass : shader->get_next_passes()) {
+				if (pass.is_valid()) {
+					ShaderMaterial *currPass = new ShaderMaterial();
+					currPass->set_shader(pass);
+					currPass->set_render_priority(0);
+					current->set_next_pass(currPass);
+					next_passes.push_back(currPass);
+					current = currPass;
+				}
+			}
+
+			#ifdef DEBUG_ENABLED
+			print_line("start");
+						for (Ref<ShaderMaterial> material : next_passes) {
+							print_line(vformat(
+									"SHADERMATERIAL\ncode: %s\n %s\n",
+									material->get_shader(), material->get_shader()->get_mode()));
+						}
+			
+			#endif
 		}
 	}
 
