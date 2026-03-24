@@ -482,13 +482,14 @@ void ShaderTextEditor::_validate_script() {
 	String error_pp;
 	List<ShaderPreprocessor::FilePosition> err_positions;
 	List<ShaderPreprocessor::Region> regions;
+	List<ShaderPreprocessor::PassRegion> pass_regions;
 	String filename;
 	if (shader.is_valid()) {
 		filename = shader->get_path();
 	} else if (shader_inc.is_valid()) {
 		filename = shader_inc->get_path();
 	}
-	last_compile_result = preprocessor.preprocess(code, filename, code_pp, &error_pp, &err_positions, &regions);
+	last_compile_result = preprocessor.preprocess(code, filename, code_pp, &error_pp, &err_positions, &regions, &pass_regions);
 
 	for (int i = 0; i < get_text_editor()->get_line_count(); i++) {
 		get_text_editor()->set_line_background_color(i, Color(0, 0, 0, 0));
@@ -574,55 +575,70 @@ void ShaderTextEditor::_validate_script() {
 			comp_info.shader_types = ShaderTypes::get_singleton()->get_types();
 		}
 
-		code = code_pp;
-		//compiler error
-		last_compile_result = sl.compile(code, comp_info);
+		// if there are pass regions, compile them individually and check if they're ok
+		int numIterations = 1;
+		if (pass_regions.is_empty()) {
+			code = code_pp;
+		} else {
+			code = pass_regions.get(0).code;
+			numIterations = pass_regions.size();
+		}
 
-		if (last_compile_result != OK) {
-			Vector<ShaderLanguage::FilePosition> include_positions = sl.get_include_positions();
+		for (int i = 0; i < numIterations; i++) {
+			//compiler error
+			last_compile_result = sl.compile(code, comp_info);
 
-			String err_text;
-			int err_line;
-			if (include_positions.size() > 1) {
-				// Error in an included file.
-				err_line = include_positions[0].line;
+			if (last_compile_result != OK) {
+				Vector<ShaderLanguage::FilePosition> include_positions = sl.get_include_positions();
 
-				const String inc_file = include_positions[include_positions.size() - 1].file;
-				const int inc_line = include_positions[include_positions.size() - 1].line;
-				const String message = sl.get_error_text().replace("[", "[lb]");
+				String err_text;
+				int err_line;
+				if (include_positions.size() > 1) {
+					// Error in an included file.
+					err_line = include_positions[0].line;
 
-				err_text = vformat(TTR("Error at line %d in include %s:%d:"), err_line, inc_file, inc_line) + " " + message;
-				set_error_count(include_positions.size() - 1);
+					const String inc_file = include_positions[include_positions.size() - 1].file;
+					const int inc_line = include_positions[include_positions.size() - 1].line;
+					const String message = sl.get_error_text().replace("[", "[lb]");
+
+					err_text = vformat(TTR("Error at line %d in include %s:%d:"), err_line, inc_file, inc_line) + " " + message;
+					set_error_count(include_positions.size() - 1);
+				} else {
+					// Error in the main file.
+					err_line = sl.get_error_line();
+
+					const String message = sl.get_error_text().replace("[", "[lb]");
+
+					err_text = vformat(TTR("Error at line %d:"), err_line) + " " + message;
+					set_error_count(0);
+				}
+
+				set_error(err_text);
+				set_error_pos(err_line - 1, 0);
+
+				get_text_editor()->set_line_background_color(err_line - 1, marked_line_color);
 			} else {
-				// Error in the main file.
-				err_line = sl.get_error_line();
-
-				const String message = sl.get_error_text().replace("[", "[lb]");
-
-				err_text = vformat(TTR("Error at line %d:"), err_line) + " " + message;
-				set_error_count(0);
+				set_error("");
 			}
 
-			set_error(err_text);
-			set_error_pos(err_line - 1, 0);
+			if (warnings.size() > 0 || last_compile_result != OK) {
+				warnings_panel->clear();
+			}
+			warnings.clear();
+			for (List<ShaderWarning>::Element *E = sl.get_warnings_ptr(); E; E = E->next()) {
+				warnings.push_back(E->get());
+			}
+			if (warnings.size() > 0 && last_compile_result == OK) {
+				warnings.sort_custom<WarningsComparator>();
+				_update_warning_panel();
+			} else {
+				set_warning_count(0);
+			}
 
-			get_text_editor()->set_line_background_color(err_line - 1, marked_line_color);
-		} else {
-			set_error("");
-		}
-
-		if (warnings.size() > 0 || last_compile_result != OK) {
-			warnings_panel->clear();
-		}
-		warnings.clear();
-		for (List<ShaderWarning>::Element *E = sl.get_warnings_ptr(); E; E = E->next()) {
-			warnings.push_back(E->get());
-		}
-		if (warnings.size() > 0 && last_compile_result == OK) {
-			warnings.sort_custom<WarningsComparator>();
-			_update_warning_panel();
-		} else {
-			set_warning_count(0);
+			// if there are more passes to compile, set the code for the next one
+			if (i + 1 < numIterations) {
+				code = pass_regions.get(i + 1).code;
+			}
 		}
 	}
 
