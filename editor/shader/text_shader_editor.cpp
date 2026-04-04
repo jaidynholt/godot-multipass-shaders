@@ -423,6 +423,7 @@ static void _complete_include_paths(List<ScriptLanguage::CodeCompletionOption> *
 void ShaderTextEditor::_code_complete_script(const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options) {
 	List<ScriptLanguage::CodeCompletionOption> pp_options;
 	List<ScriptLanguage::CodeCompletionOption> pp_defines;
+	List<ShaderPreprocessor::PassRegion> pass_regions;
 	ShaderPreprocessor preprocessor;
 	String code;
 	String resource_path = (shader.is_valid() ? shader->get_path() : shader_inc->get_path());
@@ -430,7 +431,7 @@ void ShaderTextEditor::_code_complete_script(const String &p_code, List<ScriptLa
 	if (!complete_from_path.ends_with("/")) {
 		complete_from_path += "/";
 	}
-	preprocessor.preprocess(p_code, resource_path, code, nullptr, nullptr, nullptr, nullptr, nullptr, &pp_options, &pp_defines, _complete_include_paths);
+	preprocessor.preprocess(p_code, resource_path, code, nullptr, nullptr, nullptr, &pass_regions, nullptr, &pp_options, &pp_defines, _complete_include_paths);
 	complete_from_path = String();
 	if (pp_options.size()) {
 		for (const ScriptLanguage::CodeCompletionOption &E : pp_options) {
@@ -447,21 +448,44 @@ void ShaderTextEditor::_code_complete_script(const String &p_code, List<ScriptLa
 	ShaderLanguage::ShaderCompileInfo comp_info;
 	comp_info.global_shader_uniform_type_func = _get_global_shader_uniform_type;
 
-	if (shader.is_null()) {
-		comp_info.is_include = true;
-
-		sl.complete(code, comp_info, r_options, calltip);
-		get_text_editor()->set_code_hint(calltip);
-		return;
+	// if there are pass regions, compile them individually and check if they're ok
+	String codeToComplete;
+	int numIterations = 1;
+	if (pass_regions.is_empty()) {
+		codeToComplete = code;
+	} else {
+		codeToComplete = pass_regions.get(0).code;
+		numIterations = pass_regions.size();
 	}
-	_check_shader_mode();
-	comp_info.functions = ShaderTypes::get_singleton()->get_functions(RenderingServer::ShaderMode(shader->get_mode()));
-	comp_info.render_modes = ShaderTypes::get_singleton()->get_modes(RenderingServer::ShaderMode(shader->get_mode()));
-	comp_info.stencil_modes = ShaderTypes::get_singleton()->get_stencil_modes(RenderingServer::ShaderMode(shader->get_mode()));
-	comp_info.shader_types = ShaderTypes::get_singleton()->get_types();
 
-	sl.complete(code, comp_info, r_options, calltip);
-	get_text_editor()->set_code_hint(calltip);
+	for (int i = 0; i < numIterations; i++) {
+
+#ifdef DEBUG_ENABLED
+		// print to output: check what code is being compiled
+		print_line(vformat("EDITOR COMPILE CODE:\n%s\n", codeToComplete));
+#endif
+
+		if (shader.is_null()) {
+			comp_info.is_include = true;
+
+			sl.complete(codeToComplete, comp_info, r_options, calltip);
+			get_text_editor()->set_code_hint(calltip);
+			return;
+		}
+		_check_shader_mode();
+		comp_info.functions = ShaderTypes::get_singleton()->get_functions(RenderingServer::ShaderMode(shader->get_mode()));
+		comp_info.render_modes = ShaderTypes::get_singleton()->get_modes(RenderingServer::ShaderMode(shader->get_mode()));
+		comp_info.stencil_modes = ShaderTypes::get_singleton()->get_stencil_modes(RenderingServer::ShaderMode(shader->get_mode()));
+		comp_info.shader_types = ShaderTypes::get_singleton()->get_types();
+
+		sl.complete(codeToComplete, comp_info, r_options, calltip);
+		get_text_editor()->set_code_hint(calltip);
+
+		// if there are more passes to compile, set the code for the next one
+		if (i + 1 < numIterations) {
+			codeToComplete = pass_regions.get(i + 1).code;
+		}
+	}
 }
 
 void ShaderTextEditor::_validate_script() {

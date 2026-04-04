@@ -1450,9 +1450,9 @@ Error ShaderPreprocessor::preprocess(const String &p_code, const String &p_filen
 	// NOTE: this fixes the in-editor preprocessor issue with duplicate vertex() and fragment()
 	// currently working on fixing where the shader_compiler is called so it checks the passes individually
 	// so this hacky fix is not needed
-	/*if (!pp_state.pass_regions[p_filename].is_empty()) {
+	if (!pp_state.pass_regions[p_filename].is_empty()) {
 		r_result = pp_state.pass_regions[p_filename].front()->get().code;
-	}*/
+	}
 
 
 	if (r_passes) {
