@@ -585,6 +585,11 @@ void ShaderTextEditor::_validate_script() {
 		}
 
 		for (int i = 0; i < numIterations; i++) {
+
+#ifdef DEBUG_ENABLED
+			// print to output: check what code is being compiled
+			print_line(vformat("EDITOR COMPILE CODE:\n%s\n", code));
+#endif
 			//compiler error
 			last_compile_result = sl.compile(code, comp_info);
 

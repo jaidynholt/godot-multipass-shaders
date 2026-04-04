@@ -6397,8 +6397,9 @@ void VisualShaderEditor::_update_preview() {
 		String path = visual_shader->get_path();
 		String error_pp;
 		List<ShaderPreprocessor::FilePosition> err_positions;
+		List<ShaderPreprocessor::PassRegion> pass_regions;
 		ShaderPreprocessor preprocessor;
-		Error err = preprocessor.preprocess(code, path, preprocessed_code, &error_pp, &err_positions);
+		Error err = preprocessor.preprocess(code, path, preprocessed_code, &error_pp, &err_positions, nullptr, &pass_regions);
 		if (err != OK) {
 			ERR_FAIL_COND(err_positions.is_empty());
 
@@ -6412,32 +6413,49 @@ void VisualShaderEditor::_update_preview() {
 			shader_error = true;
 			return;
 		}
-	}
 
-	ShaderLanguage sl;
-	Error err = sl.compile(preprocessed_code, info);
-	if (err != OK) {
-		int err_line;
-		String err_text;
-		Vector<ShaderLanguage::FilePosition> include_positions = sl.get_include_positions();
-		if (include_positions.size() > 1) {
-			// Error is in an include.
-			err_line = include_positions[0].line;
-			err_text = "error(" + itos(err_line) + ") in include " + include_positions[include_positions.size() - 1].file + ":" + itos(include_positions[include_positions.size() - 1].line) + ": " + sl.get_error_text();
+		ShaderLanguage sl;
+
+		// if there are pass regions, compile them individually and check if they're ok
+		int numIterations = 1;
+		if (pass_regions.is_empty()) {
+			code = preprocessed_code;
 		} else {
-			err_line = sl.get_error_line();
-			err_text = "error(" + itos(err_line) + "): " + sl.get_error_text();
+			code = pass_regions.get(0).code;
+			numIterations = pass_regions.size();
 		}
 
-		Color error_line_color = EDITOR_GET("text_editor/theme/highlighting/mark_color");
-		preview_text->set_line_background_color(err_line - 1, error_line_color);
-		error_panel->show();
+		for (int i = 0; i < numIterations; i++) {
+			Error err = sl.compile(code, info);
+			if (err != OK) {
+				int err_line;
+				String err_text;
+				Vector<ShaderLanguage::FilePosition> include_positions = sl.get_include_positions();
+				if (include_positions.size() > 1) {
+					// Error is in an include.
+					err_line = include_positions[0].line;
+					err_text = "error(" + itos(err_line) + ") in include " + include_positions[include_positions.size() - 1].file + ":" + itos(include_positions[include_positions.size() - 1].line) + ": " + sl.get_error_text();
+				} else {
+					err_line = sl.get_error_line();
+					err_text = "error(" + itos(err_line) + "): " + sl.get_error_text();
+				}
 
-		error_label->set_text(err_text);
-		shader_error = true;
-	} else {
-		error_panel->hide();
-		shader_error = false;
+				Color error_line_color = EDITOR_GET("text_editor/theme/highlighting/mark_color");
+				preview_text->set_line_background_color(err_line - 1, error_line_color);
+				error_panel->show();
+
+				error_label->set_text(err_text);
+				shader_error = true;
+			} else {
+				error_panel->hide();
+				shader_error = false;
+			}
+
+			// if there are more passes to compile, set the code for the next one
+			if (i + 1 < numIterations) {
+				code = pass_regions.get(i + 1).code;
+			}
+		}
 	}
 }
 
