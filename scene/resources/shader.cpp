@@ -113,25 +113,29 @@ void Shader::set_code(const String &p_code) {
 		ShaderPreprocessor preprocessor;
 		List<ShaderPreprocessor::PassRegion> pass_regions;
 
+		// preprocess entire script
 		Error result = preprocessor.preprocess(p_code, path, preprocessed_code, nullptr, nullptr, nullptr, &pass_regions, &new_include_dependencies);
+
 		if (result == OK) {
 			// This ensures previous include resources are not freed and then re-loaded during parse (which would make compiling slower)
 			include_dependencies = new_include_dependencies;
 			int curr_index = 0;
 
-			for (ShaderPreprocessor::PassRegion pr : pass_regions) {
-				Ref<Shader> shader;
-				shader.instantiate();
+			if (pass_regions.size() > 1) {
+				for (ShaderPreprocessor::PassRegion pr : pass_regions) {
+					print_line("Pass");
+					Ref<Shader> shader;
+					shader.instantiate();
 
-				shader->set_include_path(include_path);
-				shader->set_code(pr.code);
-				shader->set_include_path_dependencies(include_dependencies);
-				shader->set_next_passes(&next_passes, curr_index + 1, pr.priority);
-				next_passes.push_back(shader);
+					shader->set_include_path(include_path);
+					shader->set_preprocessed_code(pr.code);
+					shader->set_include_path_dependencies(include_dependencies);
+					shader->set_next_passes(&next_passes, curr_index + 1, pr.priority);
+					next_passes.push_back(shader);
 
+				}
 			}
-
-
+		
 
 
 #ifdef DEBUG_ENABLED
@@ -143,6 +147,58 @@ void Shader::set_code(const String &p_code) {
 			
 #endif
 		}
+	}
+
+	// Try to get the shader type from the final, fully preprocessed shader code.
+	String type = ShaderLanguage::get_shader_type(preprocessed_code);
+
+	if (type == "canvas_item") {
+		mode = MODE_CANVAS_ITEM;
+	} else if (type == "particles") {
+		mode = MODE_PARTICLES;
+	} else if (type == "sky") {
+		mode = MODE_SKY;
+	} else if (type == "fog") {
+		mode = MODE_FOG;
+	} else {
+		mode = MODE_SPATIAL;
+	}
+
+	for (const Ref<ShaderInclude> &E : include_dependencies) {
+		E->connect_changed(callable_mp(this, &Shader::_dependency_changed));
+	}
+
+	if (shader_rid.is_valid()) {
+		RenderingServer::get_singleton()->shader_set_code(shader_rid, preprocessed_code);
+		preprocessed_code = String();
+	}
+
+	emit_changed();
+}
+
+// this is called when shader is instantiated
+void Shader::set_preprocessed_code(const String &p_code) {
+	for (const Ref<ShaderInclude> &E : include_dependencies) {
+		E->disconnect_changed(callable_mp(this, &Shader::_dependency_changed));
+	}
+
+	code = p_code;
+	preprocessed_code = p_code;
+
+	{
+		String path = get_path();
+		if (path.is_empty()) {
+			path = include_path;
+		}
+		// Preprocessor must run here and not in the server because:
+		// 1) Need to keep track of include dependencies at resource level
+		// 2) Server does not do interaction with Resource filetypes, this is a scene level feature.
+		HashSet<Ref<ShaderInclude>> new_include_dependencies;
+		//ShaderPreprocessor preprocessor;
+		//List<ShaderPreprocessor::PassRegion> pass_regions;
+
+		// preprocess entire script
+		//Error result = preprocessor.preprocess(p_code, path, preprocessed_code, nullptr, nullptr, nullptr, &pass_regions, &new_include_dependencies);
 	}
 
 	// Try to get the shader type from the final, fully preprocessed shader code.

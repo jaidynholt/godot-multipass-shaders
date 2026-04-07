@@ -458,18 +458,22 @@ void ShaderMaterial::set_shader(const Ref<Shader> &p_shader) {
 		}
 
 		// if there are next passes
-
+		next_passes.clear();
 		ShaderMaterial *current = this;
 		if (!shader->get_next_passes().is_empty()) {
+			int index = 0;
 			for (Ref<Shader> pass : shader->get_next_passes()) {
 				if (pass.is_valid()) {
+					print_line("adding pass " + index);
 					ShaderMaterial *currPass = new ShaderMaterial();
 					currPass->set_shader(pass);
 					currPass->set_render_priority(0);
 					current->set_next_pass(currPass);
 					next_passes.push_back(currPass);
 					current = currPass;
+					index++;
 				}
+				//break;
 			}
 
 			#ifdef DEBUG_ENABLED

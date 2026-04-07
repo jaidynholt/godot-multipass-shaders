@@ -93,6 +93,8 @@ public:
 	void set_code(const String &p_code);
 	String get_code() const;
 
+	void set_preprocessed_code(const String &p_code);
+
 	void inspect_native_shader_code();
 
 	void get_shader_uniform_list(List<PropertyInfo> *p_params, bool p_get_groups = false) const;
