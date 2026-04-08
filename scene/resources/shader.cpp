@@ -122,7 +122,30 @@ void Shader::set_code(const String &p_code) {
 			int curr_index = 0;
 
 			if (pass_regions.size() > 1) {
-				for (ShaderPreprocessor::PassRegion pr : pass_regions) {
+				for (int i = 0; i < pass_regions.size(); i++) {
+					ShaderPreprocessor::PassRegion pr = pass_regions.get(i);
+
+					/*if (i == 0) {
+						set_include_path(include_path);
+						set_preprocessed_code(pr.code);
+						set_include_path_dependencies(include_dependencies);
+						set_next_passes(&next_passes, curr_index + 1, pr.priority);
+						next_passes.push_back(this);
+					} else {*/
+
+						print_line("Pass");
+						Ref<Shader> shader;
+						shader.instantiate();
+
+						shader->set_include_path(include_path);
+						shader->set_preprocessed_code(pr.code);
+						shader->set_include_path_dependencies(include_dependencies);
+						//shader->set_next_passes(&next_passes, i + 1, pr.priority);
+						next_passes.push_back(shader);
+					//}
+				}
+
+				/*for (ShaderPreprocessor::PassRegion pr : pass_regions) {
 					print_line("Pass");
 					Ref<Shader> shader;
 					shader.instantiate();
@@ -133,7 +156,7 @@ void Shader::set_code(const String &p_code) {
 					shader->set_next_passes(&next_passes, curr_index + 1, pr.priority);
 					next_passes.push_back(shader);
 
-				}
+				}*/
 			}
 		
 
