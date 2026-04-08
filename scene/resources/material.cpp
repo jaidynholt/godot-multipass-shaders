@@ -465,16 +465,14 @@ void ShaderMaterial::set_shader(const Ref<Shader> &p_shader) {
 			for (Ref<Shader> pass : shader->get_next_passes()) {
 				Ref<Shader> pass = shader->get_next_passes()[index];
 				if (pass.is_valid()) {
-					print_line("adding pass ");
 					ShaderMaterial *currPass = new ShaderMaterial();
 					currPass->set_shader(pass);
-					currPass->set_render_priority(0);
+					currPass->set_render_priority(pass->get_pass_priority());
 					current->set_next_pass(currPass);
 					next_passes.push_back(currPass);
 					current = currPass;
 					index++;
 				}
-				//break;
 			}
 
 			#ifdef DEBUG_ENABLED

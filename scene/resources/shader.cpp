@@ -92,6 +92,14 @@ void Shader::set_next_passes(Vector<Ref<Shader>>* r_next_passes, int next_pass_i
 	priority = next_pass_priority;
 }
 
+void Shader::set_pass_priority(int p_priority) {
+	priority = p_priority;
+}
+
+int Shader::get_pass_priority() {
+	return priority;
+}
+
 // this is called when shader is instantiated
 void Shader::set_code(const String &p_code) {
 	for (const Ref<ShaderInclude> &E : include_dependencies) {
@@ -122,41 +130,20 @@ void Shader::set_code(const String &p_code) {
 			int curr_index = 0;
 
 			if (pass_regions.size() > 1) {
+				next_passes.clear();
 				for (int i = 0; i < pass_regions.size(); i++) {
 					ShaderPreprocessor::PassRegion pr = pass_regions.get(i);
 
-					/*if (i == 0) {
-						set_include_path(include_path);
-						set_preprocessed_code(pr.code);
-						set_include_path_dependencies(include_dependencies);
-						set_next_passes(&next_passes, curr_index + 1, pr.priority);
-						next_passes.push_back(this);
-					} else {*/
-
-						print_line("Pass");
 						Ref<Shader> shader;
 						shader.instantiate();
 
 						shader->set_include_path(include_path);
 						shader->set_preprocessed_code(pr.code);
 						shader->set_include_path_dependencies(include_dependencies);
-						//shader->set_next_passes(&next_passes, i + 1, pr.priority);
+						shader->set_pass_priority(i+1);
 						next_passes.push_back(shader);
-					//}
 				}
 
-				/*for (ShaderPreprocessor::PassRegion pr : pass_regions) {
-					print_line("Pass");
-					Ref<Shader> shader;
-					shader.instantiate();
-
-					shader->set_include_path(include_path);
-					shader->set_preprocessed_code(pr.code);
-					shader->set_include_path_dependencies(include_dependencies);
-					shader->set_next_passes(&next_passes, curr_index + 1, pr.priority);
-					next_passes.push_back(shader);
-
-				}*/
 			}
 		
 

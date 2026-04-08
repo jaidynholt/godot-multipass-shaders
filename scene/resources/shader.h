@@ -105,6 +105,8 @@ public:
 	void get_default_texture_parameter_list(List<StringName> *r_textures) const;
 
 	void set_next_passes(Vector<Ref<Shader>> *r_next_passes, int next_pass_index, int next_pass_priority);
+	void set_pass_priority(int p_priority);
+	int get_pass_priority();
 
 	virtual bool is_text_shader() const;
 
