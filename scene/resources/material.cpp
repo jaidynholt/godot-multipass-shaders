@@ -458,7 +458,9 @@ void ShaderMaterial::set_shader(const Ref<Shader> &p_shader) {
 		}
 
 		// if there are next passes
-		next_passes.clear();
+		if (!next_passes.is_empty()) {
+			next_passes.clear();
+		}
 		ShaderMaterial *current = this;
 		if (!shader->get_next_passes().is_empty()) {
 			int index = 0;

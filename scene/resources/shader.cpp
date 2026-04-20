@@ -130,8 +130,11 @@ void Shader::set_code(const String &p_code) {
 			int curr_index = 0;
 
 			if (pass_regions.size() > 1) {
-				next_passes.clear();
-				for (int i = 0; i < pass_regions.size(); i++) {
+				if (!next_passes.is_empty()) {
+					next_passes.clear();
+				}
+
+				for (int i = 1; i < pass_regions.size(); i++) {
 					ShaderPreprocessor::PassRegion pr = pass_regions.get(i);
 
 						Ref<Shader> shader;
